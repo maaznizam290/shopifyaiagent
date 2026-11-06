@@ -10,7 +10,7 @@ export default async function NewCampaignPage({ searchParams }: { searchParams: 
   const products = store ? await productOptions(store.id) : [];
   return (
     <>
-      <PageHeader eyebrow="Campaign Guardian" title="New campaign" subtitle="Enter the campaign exactly as it will appear to customers. The original submission is stored unchanged for the audit trail." />
+      <PageHeader title="New campaign" />
       <Flash searchParams={searchParams} />
       <CampaignForm action={saveCampaign} products={products} defaults={await campaignDefaults()} storefrontBase={`https://${store?.publicDomain ?? store?.shopDomain ?? ""}`} />
     </>

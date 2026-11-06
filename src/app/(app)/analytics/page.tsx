@@ -1,58 +1,67 @@
 import { BarList } from "@/components/BarList";
-import { Card, DemoBadge, Notice, PageHeader, Stat } from "@/components/ui";
+import { Card, DemoBadge, PageHeader, Stat } from "@/components/ui";
 import { campaignAnalytics, salesAnalytics } from "@/lib/analytics";
+import { prisma } from "@/lib/db";
 import { getActiveStore } from "@/lib/settings";
 
+const SEGMENTS: Record<string, string> = { AGENCY_MARKETING: "Marketing agencies", AGENCY_DEV: "Development agencies", DTC_BRAND: "DTC brands", RETAILER: "Retailers", OTHER: "Other" };
+
+/** Counts only. No revenue estimates: there is no evidence of what would have happened otherwise. */
 export default async function AnalyticsPage() {
   const store = await getActiveStore();
   const ca = await campaignAnalytics(store?.id ?? "");
   const sa = await salesAnalytics();
+  const prospects = await prisma.prospect.findMany({ select: { businessType: true, location: true } });
+  const bySegment = Object.entries(SEGMENTS).map(([k, label]) => ({ label, value: prospects.filter((p) => (p.businessType ?? "OTHER") === k).length }));
+  const byLocation = Object.entries(prospects.reduce<Record<string, number>>((a, p) => { const c = (p.location ?? "Unknown").split(",")[0].trim(); a[c] = (a[c] ?? 0) + 1; return a; }, {}))
+    .sort((a, b) => b[1] - a[1]).map(([label, value]) => ({ label, value }));
   const funnel = (s: typeof sa.actual) => [
-    { label: "Total prospects", value: s.total },
-    { label: "Qualified prospects", value: s.qualified },
-    { label: "Outreach drafts created", value: s.drafts },
-    { label: "Messages sent manually (recorded)", value: s.messages },
+    { label: "Prospects", value: s.total },
+    { label: "Qualified", value: s.qualified },
+    { label: "Drafts", value: s.drafts },
+    { label: "Messages sent", value: s.messages },
     { label: "Replies", value: s.replies },
     { label: "Meetings", value: s.meetings },
-    { label: "Pilot offers", value: s.pilots },
-    { label: "Paying customers", value: s.customers },
+    { label: "Pilots", value: s.pilots },
+    { label: "Customers", value: s.customers },
   ];
+
   return (
     <>
-      <PageHeader eyebrow="Analytics" title="Analytics" subtitle="Counts of verification outcomes and sales activity. PromiSure AI does not estimate prevented revenue loss, because it has no evidence of what would have happened." />
-      <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted">Campaign analytics <DemoBadge show={ca.isDemo} /></h2>
-      {ca.isDemo && <div className="mb-4"><Notice>These figures come from the demo store&apos;s deliberately inconsistent campaigns. They do not represent real merchant performance.</Notice></div>}
+      <PageHeader title="Analytics" badge={<DemoBadge show={ca.isDemo} />} />
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-        <Stat label="Campaigns checked" value={ca.checked} hint={`${ca.totalChecks} verification runs`} tone="teal" />
+        <Stat label="Checked" value={ca.checked} tone="teal" />
         <Stat label="Pass" value={ca.pass} tone="pass" />
         <Stat label="Review" value={ca.review} tone="review" />
         <Stat label="Block" value={ca.block} tone="block" />
         <Stat label="Pass rate" value={ca.checked ? `${Math.round((ca.pass / ca.checked) * 100)}%` : "—"} tone="brass" />
       </div>
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <Card title="Campaigns with open discrepancies" subtitle="Latest verification of each campaign">
+        <Card title="Open issues by type">
           <BarList tone="bg-block/80" max={Math.max(1, ca.checked)} rows={[
-            { label: "Price discrepancies", value: ca.discrepancies.price },
-            { label: "Inventory discrepancies", value: ca.discrepancies.inventory },
-            { label: "Claim discrepancies", value: ca.discrepancies.claims },
+            { label: "Price", value: ca.discrepancies.price },
+            { label: "Inventory", value: ca.discrepancies.inventory },
+            { label: "Claims", value: ca.discrepancies.claims },
             { label: "Expired offers", value: ca.discrepancies.expired },
-            { label: "Broken or mismatched links", value: ca.discrepancies.brokenLinks },
-            { label: "Shipping promise issues", value: ca.discrepancies.shipping },
+            { label: "Links", value: ca.discrepancies.brokenLinks },
+            { label: "Shipping", value: ca.discrepancies.shipping },
           ]} />
         </Card>
-        <Card title="Open findings by check" subtitle="Non-passing findings across latest verifications">
+        <Card title="Open findings by check">
           <BarList rows={ca.findingsByType.map(([label, value]) => ({ label: label.replace("_", " ").toLowerCase().replace(/^\w/, (c) => c.toUpperCase()), value }))} />
         </Card>
       </div>
 
-      <h2 className="mb-3 mt-10 text-sm font-semibold uppercase tracking-wide text-muted">Sales analytics</h2>
+      <h2 className="mb-3 mt-10 text-sm font-semibold text-ink">Sales</h2>
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card title="Actual performance" subtitle="Your manually entered and recorded activity only">
-          {sa.actual.total === 0 ? <p className="text-sm text-muted">No real prospects recorded yet.</p> : <BarList rows={funnel(sa.actual)} max={Math.max(1, sa.actual.total)} />}
+        <Card title="Pipeline">
+          {sa.actual.total === 0 ? <p className="text-sm text-muted">No prospects yet</p> : <BarList rows={funnel(sa.actual)} max={Math.max(1, sa.actual.total)} />}
         </Card>
-        <Card title={<span className="flex items-center gap-2">Demonstration data <DemoBadge /></span>} subtitle="Fictional prospects included for demonstration">
+        <Card title={<span className="flex items-center gap-2">Demo pipeline <DemoBadge /></span>}>
           <BarList tone="bg-brass" rows={funnel(sa.demo)} max={Math.max(1, sa.demo.total)} />
         </Card>
+        <Card title="Prospects by segment"><BarList rows={bySegment} /></Card>
+        <Card title="Prospects by location"><BarList rows={byLocation} tone="bg-brass" /></Card>
       </div>
     </>
   );

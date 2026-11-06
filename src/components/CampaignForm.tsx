@@ -30,7 +30,8 @@ export interface CampaignDefaults {
   deliveryPromise: string;
 }
 
-export function CampaignForm({ action, products, defaults, storefrontBase }: { action: (fd: FormData) => void; products: ProductOption[]; defaults: CampaignDefaults; storefrontBase: string }) {
+/** `resubmits`: the campaign is approved or live, so saving sends it back for review. */
+export function CampaignForm({ action, products, defaults, storefrontBase, resubmits = false }: { action: (fd: FormData) => void; products: ProductOption[]; defaults: CampaignDefaults; storefrontBase: string; resubmits?: boolean }) {
   const [productId, setProductId] = useState(defaults.productId);
   const [variantId, setVariantId] = useState(defaults.variantId);
   const [url, setUrl] = useState(defaults.productUrl);
@@ -52,21 +53,21 @@ export function CampaignForm({ action, products, defaults, storefrontBase }: { a
         <h2 className="mb-4 text-sm font-semibold">Campaign</h2>
         <div className="grid gap-4 md:grid-cols-3">
           <div className="md:col-span-2">
-            <label className="label" htmlFor="name">Campaign name *</label>
-            <input id="name" name="name" required minLength={2} defaultValue={defaults.name} className="input" placeholder="Spring sale – Instagram" />
+            <label className="label" htmlFor="name">Name</label>
+            <input id="name" name="name" required minLength={2} defaultValue={defaults.name} className="input" />
           </div>
           <div>
-            <label className="label" htmlFor="channel">Channel *</label>
+            <label className="label" htmlFor="channel">Channel</label>
             <select id="channel" name="channel" defaultValue={defaults.channel || "INSTAGRAM"} className="input">
               {Object.entries(CHANNEL_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
             </select>
           </div>
           <div>
-            <label className="label" htmlFor="startsAt">Campaign start</label>
+            <label className="label" htmlFor="startsAt">Starts</label>
             <input id="startsAt" name="startsAt" type="datetime-local" defaultValue={defaults.startsAt} className="input" />
           </div>
           <div>
-            <label className="label" htmlFor="endsAt">Campaign expiry</label>
+            <label className="label" htmlFor="endsAt">Ends</label>
             <input id="endsAt" name="endsAt" type="datetime-local" defaultValue={defaults.endsAt} className="input" />
           </div>
         </div>
@@ -78,74 +79,75 @@ export function CampaignForm({ action, products, defaults, storefrontBase }: { a
           <div>
             <label className="label" htmlFor="productId">Product</label>
             <select id="productId" name="productId" value={productId} onChange={(e) => onProduct(e.target.value)} className="input">
-              <option value="">Select a product…</option>
+              <option value="">—</option>
               {products.map((p) => <option key={p.id} value={p.id}>{p.title}{p.status !== "ACTIVE" ? ` (${p.status})` : ""}</option>)}
             </select>
           </div>
           <div>
-            <label className="label" htmlFor="variantId">Promoted variant</label>
+            <label className="label" htmlFor="variantId">Variant</label>
             <select id="variantId" name="variantId" value={variantId} onChange={(e) => setVariantId(e.target.value)} className="input" disabled={!product}>
-              {!product && <option value="">Select a product first</option>}
+              {!product && <option value="">—</option>}
               {product?.variants.map((v) => <option key={v.id} value={v.id}>{v.title}{v.sku ? ` · ${v.sku}` : ""} · ${v.price}</option>)}
             </select>
           </div>
           <div className="md:col-span-2">
-            <label className="label" htmlFor="productUrl">Product URL (landing page)</label>
+            <label className="label" htmlFor="productUrl">URL</label>
             <input id="productUrl" name="productUrl" value={url} onChange={(e) => setUrl(e.target.value)} className="input" placeholder={`${storefrontBase}/products/…`} inputMode="url" />
           </div>
         </div>
         {variant && (
-          <p className="mt-3 rounded-lg bg-cloud px-3 py-2 text-xs text-muted">
-            Live Shopify data for this variant: price <b className="text-ink">${variant.price}</b>
-            {variant.compareAtPrice && <> · compare-at <b className="text-ink">${variant.compareAtPrice}</b></>} · stock <b className="text-ink">{variant.qty ?? "not tracked"}</b> · {variant.available ? "available for sale" : <b className="text-block">unavailable</b>}. Verification compares against this when you submit.
-          </p>
+          <dl className="mt-4 flex flex-wrap gap-x-6 gap-y-1 text-sm" aria-label="Live variant">
+            <div className="flex gap-1.5"><dt className="text-muted">Price</dt><dd className="font-medium tabular-nums">${variant.price}</dd></div>
+            {variant.compareAtPrice && <div className="flex gap-1.5"><dt className="text-muted">Was</dt><dd className="tabular-nums">${variant.compareAtPrice}</dd></div>}
+            <div className="flex gap-1.5"><dt className="text-muted">Stock</dt><dd className="tabular-nums">{variant.qty ?? "Untracked"}</dd></div>
+            {!variant.available && <dd className="font-medium text-block">Unavailable</dd>}
+          </dl>
         )}
       </section>
 
       <section className="card card-pad">
-        <h2 className="mb-4 text-sm font-semibold">Creative and offer</h2>
+        <h2 className="mb-4 text-sm font-semibold">Offer</h2>
         <div className="grid gap-4 md:grid-cols-3">
           <div className="md:col-span-3">
-            <label className="label" htmlFor="headline">Advertised headline</label>
+            <label className="label" htmlFor="headline">Headline</label>
             <input id="headline" name="headline" defaultValue={defaults.headline} className="input" maxLength={300} />
           </div>
           <div className="md:col-span-3">
-            <label className="label" htmlFor="promoText">Promotional text</label>
+            <label className="label" htmlFor="promoText">Text</label>
             <textarea id="promoText" name="promoText" defaultValue={defaults.promoText} className="input min-h-24" maxLength={5000} />
           </div>
           <div>
-            <label className="label" htmlFor="advertisedPrice">Advertised price (AUD)</label>
-            <input id="advertisedPrice" name="advertisedPrice" defaultValue={defaults.advertisedPrice} className="input" inputMode="decimal" placeholder="49.95" />
+            <label className="label" htmlFor="advertisedPrice">Price</label>
+            <input id="advertisedPrice" name="advertisedPrice" defaultValue={defaults.advertisedPrice} className="input" inputMode="decimal" />
           </div>
           <div>
             <label className="label" htmlFor="discountType">Discount</label>
             <select id="discountType" name="discountType" value={discountType} onChange={(e) => setDiscountType(e.target.value)} className="input">
-              <option value="NONE">No discount</option>
+              <option value="NONE">None</option>
               <option value="PERCENT">Percentage off</option>
               <option value="FIXED_AMOUNT">Fixed amount off</option>
-              <option value="COMPARE_AT">Was / now pricing</option>
+              <option value="COMPARE_AT">Was / now</option>
             </select>
           </div>
           <div>
-            <label className="label" htmlFor="discountValue">{discountType === "PERCENT" ? "Percent off" : discountType === "FIXED_AMOUNT" ? "Amount off (AUD)" : "Discount value"}</label>
+            <label className="label" htmlFor="discountValue">{discountType === "PERCENT" ? "Percent off" : discountType === "FIXED_AMOUNT" ? "Amount off" : "Value"}</label>
             <input id="discountValue" name="discountValue" defaultValue={defaults.discountValue} className="input" inputMode="decimal" disabled={discountType === "NONE" || discountType === "COMPARE_AT"} />
           </div>
           <div className="md:col-span-2">
-            <label className="label" htmlFor="claims">Product claims (one per line)</label>
-            <textarea id="claims" name="claims" defaultValue={defaults.claims} className="input min-h-24" placeholder={"Water-resistant shell\nSuitable for ages 8+"} />
-            <p className="mt-1 text-xs text-muted">Claim-like statements in the headline and text are also extracted and checked automatically.</p>
+            <label className="label" htmlFor="claims">Claims</label>
+            <textarea id="claims" name="claims" defaultValue={defaults.claims} className="input min-h-24" placeholder="One per line" />
           </div>
           <div>
-            <label className="label" htmlFor="deliveryPromise">Delivery promise</label>
-            <textarea id="deliveryPromise" name="deliveryPromise" defaultValue={defaults.deliveryPromise} className="input min-h-24" placeholder="Delivery in 3-7 business days" />
+            <label className="label" htmlFor="deliveryPromise">Delivery</label>
+            <textarea id="deliveryPromise" name="deliveryPromise" defaultValue={defaults.deliveryPromise} className="input min-h-24" />
           </div>
         </div>
       </section>
 
       <div className="flex flex-wrap items-center justify-end gap-2">
         <button name="intent" value="draft" className="btn btn-secondary">Save draft</button>
-        <button name="intent" value="verify" className="btn btn-secondary">Save draft &amp; verify</button>
-        <button name="intent" value="submit" className="btn btn-primary">Submit for verification</button>
+        <button name="intent" value="verify" className="btn btn-secondary">Save &amp; verify</button>
+        <button name="intent" value="submit" className="btn btn-primary">{resubmits ? "Resubmit" : "Submit"}</button>
       </div>
     </form>
   );

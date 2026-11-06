@@ -1,15 +1,14 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ExternalLink, Sparkles } from "lucide-react";
 import { deleteProspect, generateDraftsAction, markDraft, recordActivityAction, saveProspect, setProspectStatus } from "@/app/actions";
 import { CopyButton } from "@/components/CopyButton";
 import { Flash, type SP } from "@/components/Flash";
 import { ProspectFields } from "@/components/ProspectFields";
-import { Card, DemoBadge, fmtDate, Notice, PageHeader, Pill } from "@/components/ui";
+import { Card, DemoBadge, fmtDate, PageHeader, Pill } from "@/components/ui";
 import { parseJson, prisma } from "@/lib/db";
 import { OUTREACH_STATUSES, QUALIFIED_THRESHOLD, type ScoreItem } from "@/lib/sales/scoring";
 
-const ACTIVITY_TYPES = [["NOTE", "Note"], ["CONNECTION_SENT", "I sent a connection request"], ["MESSAGE_SENT", "I sent a LinkedIn message"], ["EMAIL_SENT", "I sent an email"], ["REPLY", "Prospect replied"], ["MEETING", "Meeting booked"], ["PILOT_OFFER", "Pilot offered"], ["CUSTOMER", "Became paying customer"]];
+const ACTIVITY_TYPES = [["NOTE", "Note"], ["CONNECTION_SENT", "Connection sent"], ["MESSAGE_SENT", "Message sent"], ["EMAIL_SENT", "Email sent"], ["REPLY", "Reply"], ["MEETING", "Meeting"], ["PILOT_OFFER", "Pilot offered"], ["CUSTOMER", "Customer"]];
 
 export default async function ProspectDetail({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: SP }) {
   const { id } = await params;
@@ -20,16 +19,16 @@ export default async function ProspectDetail({ params, searchParams }: { params:
 
   return (
     <>
-      <PageHeader eyebrow="Prospect CRM" title={p.companyName} subtitle={<span className="flex flex-wrap items-center gap-2">{p.contactName && <span>{p.contactName}{p.jobTitle ? `, ${p.jobTitle}` : ""}</span>}<Pill>{p.outreachStatus}</Pill><DemoBadge show={p.isDemo} /></span>}
+      <PageHeader title={p.companyName} badge={<><Pill>{p.outreachStatus.charAt(0) + p.outreachStatus.slice(1).toLowerCase()}</Pill><DemoBadge show={p.isDemo} /></>}
         actions={<>
-          {p.linkedinUrl && <a href={p.linkedinUrl} target="_blank" rel="noopener noreferrer" className="btn btn-secondary"><ExternalLink size={14} />Open LinkedIn profile</a>}
+          {p.linkedinUrl && <a href={p.linkedinUrl} target="_blank" rel="noopener noreferrer" className="btn btn-secondary"><ExternalLink size={14} />LinkedIn</a>}
           <form action={generateDraftsAction}><input type="hidden" name="id" value={p.id} /><button className="btn btn-primary"><Sparkles size={14} />Generate outreach drafts</button></form>
         </>} />
       <Flash searchParams={searchParams} />
       <div className="grid gap-6 xl:grid-cols-3">
         <div className="space-y-6 xl:col-span-2">
-          <Card title="Outreach drafts" subtitle="Copy these and send them yourself. PromiSure AI does not log in to LinkedIn, send requests or send messages.">
-            {drafts.length === 0 ? <p className="text-sm text-muted">No open drafts. Generate drafts to create a connection note, follow-up and email.</p> : (
+          <Card title="Drafts">
+            {drafts.length === 0 ? <p className="text-sm text-muted">None</p> : (
               <div className="space-y-4">
                 {drafts.map((d) => (
                   <div key={d.id} className="rounded-lg border border-line p-4">
@@ -48,23 +47,21 @@ export default async function ProspectDetail({ params, searchParams }: { params:
               </div>
             )}
           </Card>
-          <Card title="Edit prospect">
-            <form action={saveProspect} className="space-y-4"><ProspectFields p={p} full /><div className="flex justify-end"><button className="btn btn-primary">Save changes</button></div></form>
+          <Card title="Details">
+            <form action={saveProspect} className="space-y-4"><ProspectFields p={p} full /><div className="flex justify-end"><button className="btn btn-primary">Save</button></div></form>
           </Card>
         </div>
         <div className="space-y-6">
-          <Card title="Lead qualification">
-            <div className="flex items-end justify-between"><div className="h-display text-4xl tabular-nums">{p.leadScore}<span className="text-base text-steel">/100</span></div>{p.leadScore >= QUALIFIED_THRESHOLD ? <Pill tone="teal">Qualified</Pill> : <Pill>Not yet qualified</Pill>}</div>
+          <Card title="Score">
+            <div className="flex items-end justify-between"><div className="h-display text-4xl tabular-nums">{p.leadScore}<span className="text-base text-steel">/100</span></div>{p.leadScore >= QUALIFIED_THRESHOLD && <Pill tone="teal">Qualified</Pill>}</div>
             <ul className="mt-4 space-y-1.5 text-xs">{breakdown.map((b, i) => <li key={i} className="flex justify-between gap-3"><span><b className="text-ink">{b.factor}</b> <span className="text-muted">· {b.basis}</span></span><span className="tabular-nums">+{b.points}</span></li>)}</ul>
-            {breakdown.length === 0 && <p className="mt-2 text-xs text-muted">No verifiable information recorded yet.</p>}
-            <p className="mt-3 text-[11px] text-muted">The score uses recorded fields only. Unknown information scores zero.</p>
           </Card>
-          <Card title="Record manual activity">
+          <Card title="Log activity">
             <form action={recordActivityAction} className="space-y-3">
               <input type="hidden" name="id" value={p.id} />
               <select name="type" className="input" aria-label="Activity type">{ACTIVITY_TYPES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
               <textarea name="detail" className="input min-h-16" placeholder="Details" aria-label="Activity details" />
-              <button className="btn btn-primary w-full">Record</button>
+              <button className="btn btn-primary w-full">Log</button>
             </form>
             <form action={setProspectStatus} className="mt-4 flex gap-2 border-t border-line pt-4">
               <input type="hidden" name="id" value={p.id} />
@@ -72,12 +69,10 @@ export default async function ProspectDetail({ params, searchParams }: { params:
               <button className="btn btn-secondary">Set</button>
             </form>
           </Card>
-          <Card title="Activity timeline" pad={false}>
+          <Card title="Activity" pad={false}>
             <ol className="divide-y divide-line">{p.activities.map((a) => <li key={a.id} className="px-5 py-2.5 text-xs"><div className="flex justify-between gap-2"><b className="text-ink">{a.type.replace(/_/g, " ").toLowerCase()}</b><span className="text-muted">{fmtDate(a.occurredAt, true)}</span></div>{a.detail && <div className="mt-0.5 text-muted">{a.detail}</div>}</li>)}</ol>
           </Card>
-          {p.drafts.some((d) => d.status !== "DRAFT") && <Notice>{p.drafts.filter((d) => d.status === "USED").length} draft(s) used, {p.drafts.filter((d) => d.status === "DISCARDED").length} discarded.</Notice>}
           <form action={deleteProspect}><input type="hidden" name="id" value={p.id} /><button className="btn btn-danger btn-sm w-full">Delete prospect</button></form>
-          <Link href="/prospects" className="link block text-center text-sm">← All prospects</Link>
         </div>
       </div>
     </>

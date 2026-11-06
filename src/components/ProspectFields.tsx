@@ -12,28 +12,28 @@ export function ProspectFields({ p, full = false }: { p?: Prospect; full?: boole
   return (
     <div className={`grid gap-3 ${full ? "md:grid-cols-2" : ""}`}>
       {p && <input type="hidden" name="id" value={p.id} />}
-      {f("companyName", "Company *", { required: true })}
-      {f("contactName", "Contact name")}
-      {f("jobTitle", "Job title", { placeholder: "Head of E-commerce" })}
-      {f("location", "Location", { placeholder: "Sydney, NSW" })}
+      {f("companyName", "Company", { required: true })}
+      {f("contactName", "Contact")}
+      {f("jobTitle", "Job title")}
+      {f("location", "Location")}
       {full && f("country", "Country")}
-      {f("industry", "Industry", { placeholder: "Fashion" })}
+      {f("industry", "Industry")}
       <div>
         <label className="label" htmlFor="pf-businessType">Business type</label>
         <select id="pf-businessType" name="businessType" defaultValue={p?.businessType ?? ""} className="input">{TYPES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
       </div>
-      {f("website", "Website", { type: "url", placeholder: "https://" })}
-      {f("linkedinUrl", "LinkedIn profile URL", { type: "url", placeholder: "https://www.linkedin.com/in/…" })}
+      {f("website", "Website", { type: "url" })}
+      {f("linkedinUrl", "LinkedIn", { type: "url" })}
       {full && f("email", "Email", { type: "email" })}
       {full && f("employeeCount", "Employees", { type: "number", min: 1 })}
       <div className={full ? "md:col-span-2" : ""}>
         <label className="label" htmlFor="pf-shopifyEvidence">Shopify evidence</label>
-        <input id="pf-shopifyEvidence" name="shopifyEvidence" className="input" defaultValue={p?.shopifyEvidence ?? ""} placeholder="Where you saw it (e.g. Shopify Partner listing)" />
-        <label className="mt-1.5 flex items-center gap-2 text-xs"><input type="checkbox" name="shopifyVerified" defaultChecked={p?.shopifyVerified} />I verified this business uses Shopify</label>
+        <input id="pf-shopifyEvidence" name="shopifyEvidence" className="input" defaultValue={p?.shopifyEvidence ?? ""} />
+        <label className="mt-1.5 flex items-center gap-2 text-xs"><input type="checkbox" name="shopifyVerified" defaultChecked={p?.shopifyVerified} />Verified</label>
       </div>
       <div className={full ? "md:col-span-2" : ""}>
-        <label className="label" htmlFor="pf-problemHypothesis">Business problem hypothesis</label>
-        <textarea id="pf-problemHypothesis" name="problemHypothesis" className="input min-h-16" defaultValue={p?.problemHypothesis ?? ""} placeholder="Only write what you have evidence for. Drafts present it as a question." />
+        <label className="label" htmlFor="pf-problemHypothesis">Hypothesis</label>
+        <textarea id="pf-problemHypothesis" name="problemHypothesis" className="input min-h-16" defaultValue={p?.problemHypothesis ?? ""} />
       </div>
       {full && (
         <div className="md:col-span-2">

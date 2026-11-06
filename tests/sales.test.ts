@@ -79,3 +79,15 @@ describe("Outreach copilot drafts", () => {
     for (const c of ["Australia", "United States", "United Kingdom", "India", "Pakistan", "Germany", "Brazil", "Japan"]) expect(COUNTRIES).toContain(c);
   });
 });
+
+describe("Prospect CSV template", () => {
+  it("every column in public/prospects-template.csv is understood by the importer", async () => {
+    const { readFileSync } = await import("node:fs");
+    const headers = readFileSync("public/prospects-template.csv", "utf8").trim().split(",");
+    const sample: Record<string, string> = { "Shopify Verified": "yes", Employees: "12", "Business Type": "DTC brand", Website: "https://acme.example", "LinkedIn URL": "https://www.linkedin.com/in/acme", Email: "jo@acme.example" };
+    const row = Object.fromEntries(headers.map((h) => [h, sample[h] ?? `Acme ${h}`]));
+    const r = csvRowToProspect(row);
+    expect(r.ok ? "ok" : r.error).toBe("ok");
+    if (r.ok) expect(Object.values(r.data).filter((v) => v !== undefined && v !== "").length).toBeGreaterThanOrEqual(headers.length);
+  });
+});

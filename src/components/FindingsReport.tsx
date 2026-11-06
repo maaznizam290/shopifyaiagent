@@ -2,13 +2,13 @@ import type { VerificationFinding } from "@prisma/client";
 import { OutcomeDot, SeverityPill } from "./ui";
 
 const TYPE_LABELS: Record<string, string> = {
-  PRICE: "A · Price integrity",
-  INVENTORY: "B · Inventory integrity",
-  PRODUCT_STATUS: "C · Product status",
-  PROMOTION: "D · Promotion validation",
-  CLAIM: "E · Product claims",
-  SHIPPING: "F · Shipping validation",
-  DESTINATION: "G · Product destination",
+  PRICE: "Price",
+  INVENTORY: "Inventory",
+  PRODUCT_STATUS: "Product status",
+  PROMOTION: "Promotion",
+  CLAIM: "Claims",
+  SHIPPING: "Shipping",
+  DESTINATION: "Landing page",
 };
 const ORDER = Object.keys(TYPE_LABELS);
 const rank = (o: string) => (o === "BLOCK" ? 0 : o === "REVIEW" ? 1 : 2);
@@ -34,12 +34,11 @@ export function FindingsReport({ findings, compact = false }: { findings: Verifi
                     <code className="text-[11px] text-muted">{f.code}</code>
                   </div>
                   <div className={`mt-2 grid gap-x-6 gap-y-2 text-sm ${compact ? "" : "md:grid-cols-2"}`}>
-                    <div><div className="text-[11px] font-semibold uppercase tracking-wide text-muted">Campaign says</div><div className="text-ink">{f.originalClaim}</div></div>
-                    <div><div className="text-[11px] font-semibold uppercase tracking-wide text-muted">Verified information</div><div className="text-ink">{f.verifiedInfo}</div></div>
-                    {f.outcome !== "PASS" && <div><div className="text-[11px] font-semibold uppercase tracking-wide text-muted">Recommended correction</div><div className="text-ink">{f.recommendation}</div></div>}
-                    <div><div className="text-[11px] font-semibold uppercase tracking-wide text-muted">Source evidence</div><div className="text-xs text-muted">{f.sourceEvidence}</div></div>
+                    <div><div className="text-[11px] font-semibold uppercase tracking-wide text-muted">Campaign</div><div className="text-ink">{f.originalClaim}</div></div>
+                    <div><div className="text-[11px] font-semibold uppercase tracking-wide text-muted">Store</div><div className="text-ink">{f.verifiedInfo}</div></div>
+                    {f.outcome !== "PASS" && <div><div className="text-[11px] font-semibold uppercase tracking-wide text-muted">Fix</div><div className="text-ink">{f.recommendation}</div></div>}
+                    <div><div className="text-[11px] font-semibold uppercase tracking-wide text-muted">Evidence</div><div className="text-xs text-muted">{f.sourceEvidence}</div></div>
                   </div>
-                  <div className="mt-2 text-[11px] text-steel">Checked {f.createdAt.toISOString().replace("T", " ").slice(0, 19)} UTC</div>
                 </div>
               ))}
             </div>

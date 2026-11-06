@@ -11,9 +11,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <Sidebar storeName={store?.name ?? "No store"} mode={store?.mode ?? "DEMO"} />
       <main id="main" className="min-w-0 flex-1">
         <div className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6 lg:px-10 lg:py-8">{children}</div>
-        <footer className="mx-auto max-w-[1400px] px-4 pb-8 text-xs text-steel sm:px-6 lg:px-10">
-          PromiSure AI · Every campaign, verified against live store facts. · A NousGen product. PromiSure AI never changes prices, inventory, ads or customer communications.
-        </footer>
       </main>
     </div>
   );

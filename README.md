@@ -42,8 +42,8 @@ npm run test:e2e              # Playwright end-to-end against http://localhost:3
 | Shopify webhooks (HMAC verification, de-duplication) | ✅ |
 | Human approval workflow and full audit log | ✅ |
 | Shopify Admin GraphQL sync (pagination, throttling, retries) | ✅ implemented, **not yet run against a live store** |
-| Sales Intelligence, Prospect CRM, CSV import, lead qualification | ✅ |
-| LinkedIn Outreach Copilot (query generator, drafts, manual activity tracking) | ✅ |
+| Prospects (CRM), CSV import with a downloadable template, lead qualification; sales charts in Analytics | ✅ |
+| Outreach: LinkedIn search builder (any country), drafts, manual activity tracking | ✅ |
 | Analytics, keeping actual and demo data separate | ✅ |
 
 ## Architecture
@@ -103,7 +103,7 @@ Each non-passing finding adds points by severity: LOW 5, MEDIUM 12, HIGH 25, CRI
 
 **Required Shopify scopes:** `read_products` and `read_inventory`. No write scopes are requested.
 
-**Approved facts from Shopify:** product metafields in the `promisure` namespace (for example `promisure.material`) are synced as Verified facts. Facts can also be added in Product Intelligence as Merchant-entered.
+**Approved facts from Shopify:** product metafields in the `promisure` namespace (for example `promisure.material`) are synced as Verified facts. Facts can also be added on a product page (**Products**) as Merchant-entered.
 
 ## Testing a complete campaign verification scenario
 
@@ -124,7 +124,7 @@ Each non-passing finding adds points by severity: LOW 5, MEDIUM 12, HIGH 25, CRI
    - Australia-wide claim subject to remote-area restrictions
 5. Review the **Corrected campaign draft**. Click **Apply as new draft** to copy the grounded copy into the campaign and re-verify it.
 6. Try **Approve**. It is refused while BLOCK findings remain. Once the campaign is at PASS or REVIEW (REVIEW needs a note), the approval is recorded in the audit log.
-7. Test monitoring: open **Product Intelligence → Ridgeline Rain Jacket**, choose **Sell out** on variant M, and apply. The simulated change runs a monitoring cycle. The live "Spring Rain Jacket – Instagram" campaign moves PASS → BLOCK, a CRITICAL notification appears on the Overview, and a corrected draft is prepared.
+7. Test monitoring: open **Products → Ridgeline Rain Jacket**, choose **Sell out** on variant M, and apply. The simulated change runs a monitoring cycle. The live "Spring Rain Jacket – Instagram" campaign moves PASS → BLOCK, a CRITICAL notification appears on the Overview, and a corrected draft is prepared.
 
 The demo dataset has 8 campaigns with deliberate problems: wrong price, invalid discount, expired offer, contradicted material claim, out-of-stock variant, archived product with a redirect to a different handle, unsafe age and battery claims, unconditional free shipping, backorder stock, and untracked inventory.
 

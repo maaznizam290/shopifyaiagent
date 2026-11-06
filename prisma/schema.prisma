@@ -1,0 +1,327 @@
+// PromiSure AI — data model.
+// SQLite for the local MVP. Money is stored as decimal strings (Shopify returns
+// MoneyV2 amounts as strings) and calculated with decimal.js. Enumerations are
+// stored as strings so the schema migrates cleanly to PostgreSQL.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  role      String   @default("OWNER") // OWNER | REVIEWER | VIEWER
+  createdAt DateTime @default(now())
+  stores    MerchantStore[]
+  approvals CampaignApproval[]
+}
+
+model MerchantStore {
+  id             String    @id @default(cuid())
+  name           String
+  shopDomain     String    @unique // e.g. example.myshopify.com
+  publicDomain   String? // storefront domain used for URL checks
+  mode           String    @default("DEMO") // DEMO | LIVE
+  isDemo         Boolean   @default(false)
+  currency       String    @default("AUD")
+  apiVersion     String    @default("2025-07")
+  lowStockThreshold Int    @default(5)
+  lastSyncedAt   DateTime?
+  lastSyncStatus String?
+  lastSyncError  String?
+  ownerId        String?
+  owner          User?     @relation(fields: [ownerId], references: [id])
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  products   Product[]
+  policies   MerchantPolicy[]
+  campaigns  Campaign[]
+  auditLogs  AuditLog[]
+  notifications Notification[]
+  webhookEvents WebhookEvent[]
+}
+
+model Product {
+  id            String   @id @default(cuid())
+  storeId       String
+  store         MerchantStore @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  shopifyId     String // gid://shopify/Product/...
+  title         String
+  handle        String
+  description   String   @default("")
+  status        String // ACTIVE | DRAFT | ARCHIVED
+  onlineStoreUrl String?
+  publishedOnOnlineStore Boolean @default(true)
+  imageUrl      String?
+  imagesJson    String   @default("[]")
+  tagsJson      String   @default("[]")
+  category      String?
+  productType   String?
+  vendor        String?
+  shopifyUpdatedAt DateTime?
+  syncedAt      DateTime @default(now())
+  contentHash   String? // detects changes between Shopify syncs
+  monitorHash   String? // last state seen by campaign monitoring (prices, stock, status, facts)
+  isDemo        Boolean  @default(false)
+
+  variants  ProductVariant[]
+  facts     ProductFact[]
+  campaigns Campaign[]
+
+  @@unique([storeId, shopifyId])
+  @@index([storeId, handle])
+}
+
+model ProductVariant {
+  id                String  @id @default(cuid())
+  productId         String
+  product           Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  shopifyId         String
+  title             String
+  sku               String?
+  price             String // decimal string
+  compareAtPrice    String?
+  optionsJson       String  @default("[]") // [{name,value}]
+  inventoryTracked  Boolean @default(true)
+  inventoryQuantity Int?    // null = not accessible
+  inventoryPolicy   String  @default("DENY") // DENY | CONTINUE
+  availableForSale  Boolean @default(true)
+  isDemo            Boolean @default(false)
+
+  campaigns Campaign[]
+
+  @@unique([productId, shopifyId])
+}
+
+model ProductFact {
+  id         String   @id @default(cuid())
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  category   String // MATERIAL | DIMENSIONS | COMPATIBILITY | AGE | SAFETY | CERTIFICATION | INCLUDED | PERFORMANCE | OTHER
+  statement  String
+  source     String // SHOPIFY_SYNC | SHOPIFY_METAFIELD | MERCHANT_ENTERED | AI_SUGGESTION
+  verificationStatus String @default("VERIFIED") // VERIFIED | MERCHANT_ENTERED | UNVERIFIED | AI_SUGGESTION
+  sourceRef  String? // e.g. metafield namespace.key
+  approved   Boolean  @default(false)
+  isDemo     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([productId])
+}
+
+model MerchantPolicy {
+  id         String   @id @default(cuid())
+  storeId    String
+  store      MerchantStore @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  type       String // DISPATCH | DELIVERY | SHIPPING_SERVICE | GEOGRAPHY | RESTRICTION | PROMOTION
+  name       String
+  // Structured fields used by deterministic checks.
+  minDays    Int?
+  maxDays    Int?
+  regionsJson String  @default("[]")
+  freeShippingThreshold String?
+  maxDiscountPercent    String?
+  detail     String   @default("")
+  active     Boolean  @default(true)
+  isDemo     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([storeId, type])
+}
+
+model Campaign {
+  id               String   @id @default(cuid())
+  storeId          String
+  store            MerchantStore @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  name             String
+  channel          String // FACEBOOK | INSTAGRAM | TIKTOK | GOOGLE_SHOPPING | GOOGLE_ADS | PINTEREST | EMAIL | OTHER
+  productId        String?
+  product          Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  variantId        String?
+  variant          ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  productUrl       String   @default("")
+  headline         String   @default("")
+  promoText        String   @default("")
+  advertisedPrice  String?
+  discountType     String   @default("NONE") // NONE | PERCENT | FIXED_AMOUNT | COMPARE_AT
+  discountValue    String?
+  startsAt         DateTime?
+  endsAt           DateTime?
+  claimsJson       String   @default("[]") // string[]
+  deliveryPromise  String   @default("")
+  status           String   @default("DRAFT") // DRAFT | SUBMITTED | APPROVED | REJECTED | LIVE | PAUSED
+  riskStatus       String? // PASS | REVIEW | BLOCK
+  riskScore        Int?
+  lastCheckedAt    DateTime?
+  originalSnapshot String   @default("{}") // original submission content as JSON
+  correctedDraftJson String? // latest AI/template corrected copy
+  isDemo           Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  checks    CampaignCheck[]
+  approvals CampaignApproval[]
+
+  @@index([storeId, riskStatus])
+  @@index([productId])
+}
+
+model CampaignCheck {
+  id          String   @id @default(cuid())
+  campaignId  String
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  trigger     String // MANUAL | SCHEDULED | WEBHOOK | SUBMISSION
+  riskStatus  String
+  riskScore   Int
+  summary     String
+  aiProvider  String?
+  factsSnapshotJson String @default("{}")
+  createdAt   DateTime @default(now())
+
+  findings VerificationFinding[]
+
+  @@index([campaignId, createdAt])
+}
+
+model VerificationFinding {
+  id              String   @id @default(cuid())
+  checkId         String
+  check           CampaignCheck @relation(fields: [checkId], references: [id], onDelete: Cascade)
+  type            String // PRICE | INVENTORY | PRODUCT_STATUS | PROMOTION | CLAIM | SHIPPING | DESTINATION
+  code            String
+  severity        String // INFO | LOW | MEDIUM | HIGH | CRITICAL
+  outcome         String // PASS | REVIEW | BLOCK
+  originalClaim   String
+  verifiedInfo    String
+  sourceEvidence  String
+  recommendation  String
+  createdAt       DateTime @default(now())
+
+  @@index([checkId])
+}
+
+model CampaignApproval {
+  id         String   @id @default(cuid())
+  campaignId String
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  reviewer   String
+  decision   String // APPROVED | REJECTED | CHANGES_REQUESTED
+  note       String   @default("")
+  checkId    String?
+  riskStatusAtDecision String?
+  createdAt  DateTime @default(now())
+
+  @@index([campaignId])
+}
+
+model Notification {
+  id         String   @id @default(cuid())
+  storeId    String
+  store      MerchantStore @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  campaignId String?
+  level      String // INFO | WARNING | CRITICAL
+  title      String
+  body       String
+  read       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([storeId, read])
+}
+
+model WebhookEvent {
+  id         String   @id @default(cuid())
+  storeId    String?
+  store      MerchantStore? @relation(fields: [storeId], references: [id], onDelete: SetNull)
+  webhookId  String   @unique // X-Shopify-Webhook-Id, used for de-duplication
+  topic      String
+  shopDomain String
+  processedAt DateTime @default(now())
+  result     String   @default("")
+}
+
+model Prospect {
+  id              String   @id @default(cuid())
+  companyName     String
+  contactName     String?
+  jobTitle        String?
+  website         String?
+  linkedinUrl     String?
+  email           String?
+  location        String?
+  country         String   @default("Australia")
+  industry        String?
+  businessType    String? // AGENCY_MARKETING | AGENCY_DEV | DTC_BRAND | RETAILER | OTHER
+  shopifyEvidence String   @default("") // free text describing verified evidence
+  shopifyVerified Boolean  @default(false)
+  employeeCount   Int?
+  problemHypothesis String @default("")
+  leadScore       Int      @default(0)
+  scoreBreakdownJson String @default("[]")
+  outreachStatus  String   @default("NEW") // NEW | RESEARCHING | DRAFTED | MESSAGED | REPLIED | MEETING | PILOT | CUSTOMER | DISQUALIFIED
+  notes           String   @default("")
+  isDemo          Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  activities ProspectActivity[]
+  drafts     OutreachDraft[]
+
+  @@index([outreachStatus])
+  @@index([leadScore])
+}
+
+model ProspectActivity {
+  id         String   @id @default(cuid())
+  prospectId String
+  prospect   Prospect @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  type       String // NOTE | CONNECTION_SENT | MESSAGE_SENT | EMAIL_SENT | REPLY | MEETING | PILOT_OFFER | CUSTOMER | STATUS_CHANGE
+  detail     String   @default("")
+  occurredAt DateTime @default(now())
+  isDemo     Boolean  @default(false)
+
+  @@index([prospectId])
+}
+
+model OutreachDraft {
+  id         String   @id @default(cuid())
+  prospectId String
+  prospect   Prospect @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  kind       String // CONNECTION_NOTE | FOLLOW_UP | EMAIL
+  subject    String?
+  body       String
+  status     String   @default("DRAFT") // DRAFT | USED | DISCARDED
+  createdAt  DateTime @default(now())
+
+  @@index([prospectId])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  storeId   String?
+  store     MerchantStore? @relation(fields: [storeId], references: [id], onDelete: SetNull)
+  actor     String // user email or "system"
+  action    String
+  entity    String
+  entityId  String?
+  detailJson String  @default("{}")
+  createdAt DateTime @default(now())
+
+  @@index([storeId, createdAt])
+  @@index([entity, entityId])
+}
+
+model AppSetting {
+  key   String @id
+  value String
+}

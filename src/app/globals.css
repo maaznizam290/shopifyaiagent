@@ -1,0 +1,95 @@
+@import "tailwindcss";
+
+/* PromiSure AI design system — by NousGen */
+@theme {
+  --color-ink: #101827;
+  --color-slate-surface: #172335;
+  --color-cloud: #f4f6f9;
+  --color-steel: #94a3b8;
+  --color-teal: #28b8a5;
+  --color-teal-dark: #1e9384;
+  --color-brass: #d5a24a;
+  --color-pass: #16a34a;
+  --color-pass-bg: #e9f8ef;
+  --color-review: #d97706;
+  --color-review-bg: #fdf4e3;
+  --color-block: #dc2626;
+  --color-block-bg: #fdecec;
+  --color-line: #e3e8ef;
+  --color-muted: #5b6b80;
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", "Inter", ui-sans-serif, sans-serif;
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  background: var(--color-cloud);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer components {
+  .card {
+    @apply rounded-xl border border-line bg-white shadow-[0_1px_2px_rgba(16,24,39,0.04)];
+  }
+  .card-pad {
+    @apply p-5;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply bg-ink text-white hover:bg-slate-surface;
+  }
+  .btn-accent {
+    @apply bg-teal text-ink hover:bg-teal-dark hover:text-white;
+  }
+  .btn-secondary {
+    @apply border border-line bg-white text-ink hover:bg-cloud;
+  }
+  .btn-danger {
+    @apply border border-block/30 bg-white text-block hover:bg-block-bg;
+  }
+  .btn-sm {
+    @apply px-2.5 py-1.5 text-xs;
+  }
+  .label {
+    @apply mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted;
+  }
+  .input {
+    @apply w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink placeholder:text-steel focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/25;
+  }
+  .table {
+    @apply w-full text-left text-sm;
+  }
+  .table thead th {
+    @apply border-b border-line bg-cloud/60 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted;
+  }
+  .table tbody td {
+    @apply border-b border-line px-4 py-3 align-top;
+  }
+  .table tbody tr:last-child td {
+    @apply border-b-0;
+  }
+  .table tbody tr:hover {
+    @apply bg-cloud/50;
+  }
+  .h-display {
+    font-family: var(--font-display);
+    @apply font-semibold tracking-tight;
+  }
+  .link {
+    @apply font-medium text-teal-dark underline-offset-2 hover:underline;
+  }
+}
+
+@media print {
+  aside, .lg\:hidden, footer { display: none !important; }
+  body { background: white; }
+  .card { box-shadow: none; }
+}
